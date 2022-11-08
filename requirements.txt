@@ -1,0 +1,3 @@
+Pillow
+jupyter
+opencv-python

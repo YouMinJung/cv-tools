@@ -1,0 +1,2 @@
+/home/caerang/data/img_merge_test/model1_inference/ctv_Busan_DaeGyuro_0_000006.jpg
+/home/caerang/data/img_merge_test/model2_inference/ctv_Busan_DaeGyuro_0_000006.jpg

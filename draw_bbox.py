@@ -16,34 +16,54 @@ def xywh2xyxy(box):
     box[:, 3] = box[:, 1] + box[:, 3]
     return box
 
+def bbox_iou(box1, box2):
+    """
+    Calculate the Intersection over Union (IoU) of two bounding boxes.
 
-def iou(box1, box2):
-    x11, y11, x12, y12 = np.split(box1, 4, axis=1)
-    x21, y21, x22, y22 = np.split(box2, 4, axis=1)
+    Parameters
+    ----------
+    box1 : array, shape=(4,)
+        [x_min, y_min, x_max, y_max] for the first box.
+    box2 : array, shape=(4,)
+        [x_min, y_min, x_max, y_max] for the second box.
 
-    xa = np.maximum(x11, np.transpose(x21))
-    xb = np.maximum(x12, np.transpose(x22))
-    ya = np.maximum(y11, np.transpose(y21))
-    yb = np.maximum(y12, np.transpose(y22))
+    Returns
+    -------
+    iou : float
+        Intersection over Union (IoU) between box1 and box2.
+    """
+    # Determine the coordinates of the intersection rectangle
+    x_left = max(box1[0], box2[0])
+    y_top = max(box1[1], box2[1])
+    x_right = min(box1[2], box2[2])
+    y_bottom = min(box1[3], box2[3])
 
-    area_inter = np.maximum(0, (xb - xa + 1)) * np.maximum(0, (yb - ya + 1))
+    # Compute the area of intersection rectangle
+    if x_right < x_left or y_bottom < y_top:
+        return 0.0
+    intersection_area = (x_right - x_left) * (y_bottom - y_top)
 
-    area_1 = (x12 - x11 + 1) * (y12 - y11 + 1)
-    area_2 = (x22 - x21 + 1) * (y22 - y21 + 1)
-    area_union = area_1 + np.transpose(area_2) - area_inter
+    # Compute the area of both bounding boxes
+    box1_area = (box1[2] - box1[0]) * (box1[3] - box1[1])
+    box2_area = (box2[2] - box2[0]) * (box2[3] - box2[1])
 
-    iou = area_inter / area_union
+    # Compute the Union area by using formula: Union(A,B) = A + B - Inter(A,B)
+    union_area = box1_area + box2_area - intersection_area
+
+    # Compute the IoU
+    iou = intersection_area / union_area
     return iou
 
 
+def calculate_iou(box1, box2):
+    ious = np.zeros((box2.shape[0],))
+    for i in range(box2.shape[0]):
+        ious[i] = bbox_iou(box2[i][:],box1[0][:])
+    return ious
+
+
 def draw_box(img, box, color):
-    # box: [y1 x1 y2 x2]
     cv2.rectangle(img, (int(box[0]), int(box[1])), (int(box[2]), int(box[3])), color, thickness=2)
-    # print((int(box[0]), int(box[1])), (int(box[2]), int(box[3])), img.shape)
-    # cv2.rectangle(img, (138, 1203), (143, 1226), (0,0, 255), thickness=2)
-    # cv2.rectangle(img, (100, 100), (143, 1220), (0,0, 255), thickness=2)
-    # test = '/mnt/hdd01/hyeongdo/workspace/cv-tools/data/test.jpg'
-    # cv2.imwrite(test, img)
     return img
 
 
@@ -67,7 +87,8 @@ def _calculate_tp_fp_fn(label, pred, iou_threshold=0.45):
     # pred, label 모두 있는 경우
     for i in range(label.shape[0]):
         if len(pred) == 0: break
-        ious = iou(label[i:i+1, 1:], np.array(pred)[:, 1:5])[0] # [[ious]]
+        ious = calculate_iou(label[i:i+1, 1:], np.array(pred)[:, 1:5]) # [[ious]]
+        print(type(ious), ious.shape)
         ious_argsort = ious.argsort()[::-1] # decending sort
         missing = True
 
@@ -124,7 +145,6 @@ if __name__ == '__main__':
         # Read image
         image = cv2.imread(img_file)
         h, w = image.shape[:2] # height, width, channel
-        # print(image.shape)
 
         # Read prediction
         pred_file = os.path.join(pred_path, f'{p.stem}.txt')
@@ -156,9 +176,7 @@ if __name__ == '__main__':
 
         tp_count, fn_count, fp_count, tp_box, fn_box, fp_box = _calculate_tp_fp_fn(label, pred)
         total_tp_count, total_fn_count, total_fp_count = total_tp_count + tp_count, total_fn_count + fn_count, total_fp_count + fp_count
-        # print(f'tp: {total_tp_count}, fn: {total_fn_count}, fp: {total_fp_count}')
-        # img = image.copy()
-        # print(f'tp: {tp_box}',f'fn: {fn_box}\n fp: {fp_box}')
+
         for box in tp_box:
             image = draw_box(image, box, tp_color)
         for box in fn_box:

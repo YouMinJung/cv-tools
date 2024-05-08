@@ -67,80 +67,26 @@ def draw_box(img, box, color):
     return img
 
 
-def _calculate_tp_fp_fn(label, pred, iou_threshold=0.45):
-    tp_count, fn_count, fp_count = 0, 0, 0
-    tp_box, fn_box, fp_box = [], [], []
-    # label_id, pred_id = list(range(label.shape[0])), [] if len(pred)==0 else list(range(len(pred)))
-    
-    # label은 있고 pred는 0인 경우 (all fn)
-    if len(label) and len(pred) == 0:
-        # return tp_count, fn_count, fp_count, tp_box, fn_box, fp_box
-        fn_box.extend([l[1:5] for l in label])
-        fn_count = len(label)
-
-    # pred는 있고 label은 없는 경우 (all fp)
-    if len(label) == 0 and len(pred):
-        # return tp_count, fn_count, fp_count, tp_box, fn_box, fp_box
-        fp_box.extend([l[1:5] for l in pred])
-        fp_count = len(pred)
-
-    # pred, label 모두 있는 경우
-    for i in range(label.shape[0]):
-        if len(pred) == 0: break
-        ious = calculate_iou(label[i:i+1, 1:], np.array(pred)[:, 1:5]) # [[ious]]
-        print(type(ious), ious.shape)
-        ious_argsort = ious.argsort()[::-1] # decending sort
-        missing = True
-
-        for j in ious_argsort:
-            if ious[j] < iou_threshold: break
-            if label[i, 0] == pred[j][0]:
-                # image = draw_box(image, pred[j][1:5], tp_color)
-                tp_box.append(pred[j][1:5])
-                
-                missing = False
-                tp_count += 1
-
-                pred.pop(j)
-                break
-        
-        if missing:
-            # image = draw_box(image, label[i][1:5], fn_color)
-            fn_box.append(label[i][1:5])
-            fn_count += 1
-
-    if len(pred):
-        for j in range(len(pred)):
-            # image = draw_box(image, pred[j][1:5], fp_color)
-            fp_box.append(pred[j][1:5])
-            fp_count += 1  
-
-    return tp_count, fn_count, fp_count, tp_box, fn_box, fp_box
-
-
-if __name__ == '__main__':
-
+def main():
     img_root = '/mnt/hdd01/hyeongdo/datasets/VR-DRONE-v1.0.0.test/20221207/1Class/**/*'
     files = []
     files.extend(sorted(glob.glob(img_root, recursive=True)))  # glob
     images = [x for x in files if x.split('.')[-1].lower() in IMG_FORMATS]
-    postfix = 'jpg'
-    img_path = 'image'
-    label_path = 'label'
-    predict_path = 'predict'
+
     pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_1920/labels'
-    save_path = '/mnt/hdd01/hyeongdo/workspace/cv-tools/data'
-    classes = ['p', 'm']
+    # pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_1280/labels'
+    # pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_640/labels'
+    
+    save_path = '/mnt/hdd01/hyeongdo/workspace/cv-tools/data/motsynth_48e_1920'
+
     tp_color, fn_color, fp_color = (0, 255, 0), (0, 0, 255), (255, 0, 0) # G, R, B
 
-    iou_threshold = 0.45
     os.makedirs(save_path, exist_ok=True)
 
     total_tp_count, total_fn_count, total_fp_count = 0, 0, 0
 
     for img_file in images:
         p = Path(img_file)
-        basename = p.stem
 
         # Read image
         image = cv2.imread(img_file)
@@ -170,10 +116,6 @@ if __name__ == '__main__':
             label = np.array([])
             print(f'label path:{label_file} (not found or no target).')
 
-        # label path에 있는 모든 label을 읽는다
-        # pred path에 있는 label을 읽는다.
-        # 그러면 어떤 구조에서 데이터를 읽어 올 것인가?
-
         tp_count, fn_count, fp_count, tp_box, fn_box, fp_box = _calculate_tp_fp_fn(label, pred)
         total_tp_count, total_fn_count, total_fp_count = total_tp_count + tp_count, total_fn_count + fn_count, total_fp_count + fp_count
 
@@ -186,3 +128,50 @@ if __name__ == '__main__':
 
         cv2.imwrite(f'{save_path}/{p.name}', image)
         print(f'completed to draw results on {save_path}/{p.name}(tp: {tp_count}, fp: {fp_count}, fn: {fn_count})')
+
+def _calculate_tp_fp_fn(label, pred, iou_threshold=0.45):
+    tp_count, fn_count, fp_count = 0, 0, 0
+    tp_box, fn_box, fp_box = [], [], []
+    
+    # label은 있고 pred는 0인 경우 (all fn)
+    if len(label) and len(pred) == 0:
+        fn_box.extend([l[1:5] for l in label])
+        fn_count = len(label)
+
+    # pred는 있고 label은 없는 경우 (all fp)
+    if len(label) == 0 and len(pred):
+        fp_box.extend([l[1:5] for l in pred])
+        fp_count = len(pred)
+
+    # pred, label 모두 있는 경우
+    for i in range(label.shape[0]):
+        if len(pred) == 0: break
+        ious = calculate_iou(label[i:i+1, 1:], np.array(pred)[:, 1:5]) # [[ious]]
+        ious_argsort = ious.argsort()[::-1] # decending sort
+        missing = True
+
+        for j in ious_argsort:
+            if ious[j] < iou_threshold: break
+            if label[i, 0] == pred[j][0]:
+                tp_box.append(pred[j][1:5])
+                
+                missing = False
+                tp_count += 1
+
+                pred.pop(j)
+                break
+        
+        if missing:
+            fn_box.append(label[i][1:5])
+            fn_count += 1
+
+    if len(pred):
+        for j in range(len(pred)):
+            fp_box.append(pred[j][1:5])
+            fp_count += 1  
+
+    return tp_count, fn_count, fp_count, tp_box, fn_box, fp_box
+
+
+if __name__ == '__main__':
+    main()

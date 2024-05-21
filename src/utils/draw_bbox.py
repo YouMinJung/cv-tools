@@ -69,15 +69,18 @@ def draw_box(img, box, color):
 
 def main():
     img_root = '/mnt/hdd01/hyeongdo/datasets/VR-DRONE-v1.0.0.test/20221207/1Class/**/*'
+    img_root = '/work/dataset/VP-SAR-v1.0.0.all/Test/**/*'
     files = []
     files.extend(sorted(glob.glob(img_root, recursive=True)))  # glob
     images = [x for x in files if x.split('.')[-1].lower() in IMG_FORMATS]
 
     pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_1920/labels'
+    pred_path = '/work/src/yolov9/runs/val/gelan-e-1280-best-20140520/labels'
     # pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_1280/labels'
     # pred_path = '/mnt/hdd01/hyeongdo/workspace/yolov9/runs/detect/motsynth_48e_640/labels'
     
     save_path = '/mnt/hdd01/hyeongdo/workspace/cv-tools/data/motsynth_48e_1920'
+    save_path = '/work/src/yolov9/runs/val/gelan-e-1280-best-20140520/images'
 
     tp_color, fn_color, fp_color = (0, 255, 0), (0, 0, 255), (255, 0, 0) # G, R, B
 

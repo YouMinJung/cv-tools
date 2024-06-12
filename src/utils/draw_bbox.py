@@ -92,7 +92,8 @@ def main():
         p = Path(img_file)
 
         # Read image
-        image = cv2.imread(img_file)
+        image = cv2.imdecode(np.fromfile(img_file, dtype=np.uint8), cv2.IMREAD_COLOR)
+        #image = cv2.imread(img_file)
         h, w = image.shape[:2] # height, width, channel
 
         # Read prediction
@@ -129,7 +130,15 @@ def main():
         for box in fp_box:
             image = draw_box(image, box, fp_color)
 
-        cv2.imwrite(f'{save_path}/{p.name}', image)
+        #cv2.imwrite(f'{save_path}/{p.name}', image)
+        ext = os.path.splitext(p.name)[1]
+        result, n = cv2.imencode(ext, image)
+
+        path = '{}/{}'.format(save_path, p.name)
+        if result:
+            with open(path, mode='w+b') as f:                
+                n.tofile(f)
+        
         print(f'completed to draw results on {save_path}/{p.name}(tp: {tp_count}, fp: {fp_count}, fn: {fn_count})')
 
 def _calculate_tp_fp_fn(label, pred, iou_threshold=0.45):
